@@ -17,7 +17,14 @@ Binary was meant to be a universal correspondence tool for all information. By a
 ## Table of Contents
 
 1. [Introduction](#1-introduction)
-2. [Compression](#2-compression)
+2. [Proof of Convergence](#2-proof-of-convergence)
+   - [Lemma 1 — Closure on Positive Integers](#lemma-1--closure-on-positive-integers)
+   - [Lemma 2 — Strict Decrease](#lemma-2--strict-decrease)
+   - [Lemma 3 — Unique Fixed Point](#lemma-3--1-is-the-unique-fixed-point)
+   - [Main Theorem](#main-theorem--convergence-to-1)
+   - [Step Count Bound](#step-count-bound)
+   - [Contrast with Original Collatz](#contrast-with-the-original-collatz-conjecture)
+3. [Compression](#3-compression)
    - [Samples](#samples)
    - [Numeric Observations](#numeric-observations-in-current-byte-structures)
    - [Compression Functions](#compression-functions)
@@ -92,7 +99,114 @@ This methodology takes the binary numeric representation of any number and conve
 
 ---
 
-## 2. Compression
+## 2. Proof of Convergence
+
+### Definition
+
+Define the **Binary Equation Path function** `f : Z+ → Z+` as:
+
+```
+f(n) = n / 2        if n is even
+f(n) = (n - 1) / 2  if n is odd
+```
+
+For a positive integer `n₀`, define the sequence:
+
+```
+n₀, n₁ = f(n₀), n₂ = f(n₁), ..., n(k+1) = f(nk)
+```
+
+**Claim:** For all positive integers `n₀ ≥ 2`, there exists a finite `K` such that `nK = 1`.
+
+---
+
+### Lemma 1 — Closure on Positive Integers
+
+For all `n ≥ 2`, `f(n) ≥ 1`.
+
+**Proof:**
+- *Even case:* `f(n) = n/2`. Since `n ≥ 2`, `f(n) ≥ 1`. ✓
+- *Odd case:* `f(n) = (n-1)/2`. Since `n ≥ 3` (smallest odd integer > 1), `f(n) = (n-1)/2 ≥ 1`. ✓
+
+Therefore `f(n)` remains a positive integer for all `n ≥ 2`. ∎
+
+---
+
+### Lemma 2 — Strict Decrease
+
+For all `n ≥ 2`, `f(n) < n`.
+
+**Proof:**
+- *Even case:* `n/2 < n` for all `n ≥ 1`. ✓
+- *Odd case:* We need `(n-1)/2 < n`, i.e. `n - 1 < 2n`, i.e. `-1 < n`. This holds for all `n ≥ 1`. ✓
+
+Therefore `f` strictly decreases `n` at every step. ∎
+
+---
+
+### Lemma 3 — 1 is the Unique Fixed Point
+
+There is no `n ∈ Z+` such that `f(n) = n`.
+
+**Proof:**
+- *Even case:* `n/2 = n` implies `n = 0`. Not a positive integer. ✗
+- *Odd case:* `(n-1)/2 = n` implies `n = -1`. Not a positive integer. ✗
+
+Therefore the sequence has no cycles — it strictly decreases without getting stuck. ∎
+
+---
+
+### Main Theorem — Convergence to 1
+
+**For all positive integers `n₀ ≥ 2`, the sequence `{nk}` reaches `1` in finitely many steps.**
+
+**Proof:**
+
+By **Lemma 1**, each `nk ≥ 1` — the sequence stays in the positive integers.
+
+By **Lemma 2**, `n(k+1) < nk` for all `nk ≥ 2` — the sequence is strictly decreasing.
+
+By the **Well-Ordering Principle** (every non-empty subset of the positive integers has a minimum element), a strictly decreasing sequence of positive integers cannot be infinite — it must terminate.
+
+The sequence terminates when `nk = 1`, since `f(1) = 0` exits the positive integers, and by **Lemma 3** the sequence cannot cycle before reaching 1.
+
+Therefore, there exists a finite `K` such that `nK = 1`. ∎
+
+---
+
+### Step Count Bound
+
+**The sequence reaches 1 in exactly `floor(log₂(n₀))` steps.**
+
+**Proof:**
+
+In both cases, `f(n) = floor(n / 2)`:
+- Even: `n/2 = floor(n/2)` ✓
+- Odd: `(n-1)/2 = floor(n/2)` ✓
+
+Therefore `f` is exactly the **integer right-shift** — each application removes the least significant bit of `n`. A positive integer `n₀` has `floor(log₂(n₀)) + 1` bits, so after `floor(log₂(n₀))` steps the value is reduced to 1.
+
+More precisely: `nk = floor(n₀ / 2^k)`, and setting `nK = 1` gives `K = floor(log₂(n₀))`. ∎
+
+> **Key insight:** The bit-flip behavior recorded at each step (the primary bit `a`) is the compression output. The underlying walk is simply stripping bits off the number one at a time — equivalent to reading the binary representation of `n` from most-significant to least-significant bit.
+
+---
+
+### Contrast with the Original Collatz Conjecture
+
+| Property | Original Collatz (`3n + 1`) | Binary Equation Path (`n - 1`) |
+|---|---|---|
+| Convergence proven? | ❌ Unsolved | ✅ Proven above |
+| Monotone decreasing? | ❌ Odd step increases `n` | ✅ Always decreases |
+| Fixed points / cycles? | Unknown in general | ✅ None (Lemma 3) |
+| Step bound | Unknown | ✅ Exactly `floor(log₂ n)` |
+| Bit interpretation | Not direct | ✅ Equivalent to right-shift |
+
+The original Collatz function's odd rule `3n + 1` can dramatically **increase** `n`, which is precisely why convergence is so difficult to prove. Replacing it with `n - 1` makes the odd step a decrease instead, and the entire convergence proof reduces to the Well-Ordering Principle — one of the most fundamental properties of the integers.
+
+---
+
+## 3. Compression
 
 Given the following binary code:
 
@@ -386,4 +500,13 @@ static string valueDecompressor(string bts)
 
 ## License
 
-© 2026 Rich Wagner. All rights reserved.
+Copyright 2026 Rich Wagner — [newdawndata.com](https://www.newdawndata.com)
+
+Licensed under the Apache License, Version 2.0. You may obtain a copy of the License at:
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under this
+license is distributed on an **"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND**,
+either express or implied. See the License for the specific language governing permissions
+and limitations under the License.
