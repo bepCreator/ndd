@@ -2,7 +2,7 @@
 
 **Author:** Rich Wagner  
 **Date:** March 11, 2026  
-**Contact:** rich@newdawndata.com
+**Contact:** Rich2600@gmail.com
 
 ---
 
@@ -29,6 +29,14 @@ Binary was meant to be a universal correspondence tool for all information. By a
    - [Numeric Observations](#numeric-observations-in-current-byte-structures)
    - [Compression Functions](#compression-functions)
    - [Decompression Functions](#decompression-functions)
+4. [Endianness](#4-endianness)
+   - [What is Byte Order?](#what-is-byte-order)
+   - [How BEP Handles Endianness](#how-bep-handles-endianness)
+   - [FlipByteOrder Helper](#flipbyteorder-helper)
+   - [Unified API](#unified-api)
+   - [Big Endian Examples](#big-endian-examples)
+   - [Little Endian Examples](#little-endian-examples)
+   - [Value Compression — Endian-Agnostic](#value-compression--endian-agnostic)
 
 ---
 
@@ -392,76 +400,57 @@ These are operations similar to Huffman coding, DEFLATE, and other compression a
 
 ## Compression Functions
 
+The baseline implementation exposes a unified entry point that accepts `byteWidth` (1–4) and a `ByteOrder` enum, dispatching to the appropriate internal variant automatically. See [Section 4 — Endianness](#4-endianness) for full examples of both conventions.
+
+### Unified Entry Points (C#)
+
+```csharp
+// Compress a binary string
+string result = BEP.Compress(binary, byteWidth, ByteOrder.BigEndian);
+string result = BEP.Compress(binary, byteWidth, ByteOrder.LittleEndian);
+
+// Decompress a BEP path string back to binary
+string original = BEP.Decompress(path, byteWidth, ByteOrder.BigEndian);
+string original = BEP.Decompress(path, byteWidth, ByteOrder.LittleEndian);
+```
+
 ### Compressor (C#)
 
 ```csharp
-static string compressor(string used)
+static string Compressor4BE(string used)
 {
-    byte[] bin = binToByteArr(used);       // Function for Big/Little Endian Conversion
-    long val = byteLongConvert(bin, 256);  // Function to convert byte[] to long
-    string chars = "0";
-    string opbinary = "";
-    while (val != 1)
-    {
-        if (val % 2 == 1)
-        {
-            if (chars == "0")
-                chars = "1";
-            else
-                chars = "0";
-            val -= 1;
-        }
-        val /= 2;
-        opbinary = chars + opbinary;
-    }
-    return opbinary;
+    byte[] bin = BinToByteArrBE(used);          // Parse binary string MSB-first
+    long val   = ByteLongConvert(bin, 256);     // Merge bytes into base-256 integer
+    return RunCompression(val, 32);             // Walk to 1, record path
 }
 ```
 
 ### Decompressor (C#)
 
 ```csharp
-static string decompressor(string bts)
+static string Decompressor4BE(string bts)
 {
-    long odd = Convert.ToInt32(char.GetNumericValue(bts[bts.Length - 1]));
-    long val = 1;
-    char lc = bts[0];
-    foreach (char c in bts)
-    {
-        if (c != lc)
-        {
-            val += 1;
-        }
-        val *= 2;
-        lc = c;
-    }
-    long origVal = val;
-    if (odd == 1)
-        origVal += 1;
-    byte[] origBytes = intByteConvert(origVal, 256);
-    string bin = byteArrToBin(origBytes);
-    return bin;
+    long origVal     = RunDecompression(bts);   // Reverse the walk to recover integer
+    byte[] origBytes = IntByteConvert4(origVal); // Split back into bytes
+    return ByteArrToBinBE(origBytes);           // Convert to Big Endian binary string
 }
 ```
 
-> **Key note on trailing zeros:** The decompression needs to know where to end. Trailing `0`s on a binary number get immediately removed, as they do not contribute to the number value, requiring fewer equation steps. When decompressing, the binary equation paths are numerically dependent and don't require trailing/leading zeros. Use `Convert.ToInt32(value, base)` and `Convert.ToString(string, base)` to exchange values so native functions can auto-populate string lengths.
+> **Key note on trailing zeros:** Trailing `0`s on a binary number are dropped during compression as they don't contribute to the integer value, requiring fewer steps. When decompressing, use `Convert.ToInt32(value, base)` and `Convert.ToString(value, base)` so native functions auto-populate string lengths correctly.
 
 ### Value Compressor (C#)
 
 ```csharp
-static string valueCompressor(long val)
+static string ValCompressor(long val)
 {
-    string chars = "0";
+    string chars    = "0";  // Primary bit — flips on every odd step
     string opbinary = "";
     while (val != 1)
     {
         if (val % 2 == 1)
         {
-            if (chars == "0")
-                chars = "1";
-            else
-                chars = "0";
-            val -= 1;
+            chars = (chars == "0") ? "1" : "0";
+            val  -= 1;
         }
         val /= 2;
         opbinary = chars + opbinary;
@@ -473,40 +462,189 @@ static string valueCompressor(long val)
 ### Value Decompressor (C#)
 
 ```csharp
-static string valueDecompressor(string bts)
+static long ValDecompressor(string bts)
 {
     long odd = Convert.ToInt32(char.GetNumericValue(bts[bts.Length - 1]));
     long val = 1;
-    char lc = bts[0];
+    char lc  = bts[0];
     foreach (char c in bts)
     {
-        if (c != lc)
-        {
-            val += 1;
-        }
+        if (c != lc) val += 1;
         val *= 2;
         lc = c;
     }
     long origVal = val;
-    if (odd == 1)
-        origVal += 1;
-    byte[] origBytes = intByteConvert(origVal, 256);
-    string bin = byteArrToBin(origBytes);
+    if (odd == 1) origVal += 1;
     return origVal;
 }
 ```
 
 ---
 
+## 4. Endianness
+
+### What is Byte Order?
+
+Byte order (endianness) describes the sequence in which bytes are arranged when representing a multi-byte value as a binary string.
+
+**Big Endian (BE)** — most significant byte first. This is the standard readable/network order and the convention used throughout the paper's worked examples.
+
+```
+Value: 51,762   →   bytes [202, 49]   →   binary: 11001010 00110001
+                     MSB first                      ^^^^^^^^ most significant byte
+```
+
+**Little Endian (LE)** — least significant byte first. This is the native memory order on x86/x64 processors (Intel, AMD) and most modern consumer hardware.
+
+```
+Value: 51,762   →   bytes [49, 202]   →   binary: 00110001 11001010
+                     LSB first                      ^^^^^^^^ least significant byte
+```
+
+The integer value is the same in both cases — only the byte ordering of its binary string representation differs.
+
+---
+
+### How BEP Handles Endianness
+
+The BEP compression walk itself is **endian-agnostic** — it operates on a plain integer and always produces the same path regardless of byte order. Endianness only applies at the boundaries: converting an incoming binary string into an integer before the walk, and converting the integer back to a binary string after decompression.
+
+```
+[BE binary string]  ──►  integer  ──►  BEP walk  ──►  path string  ──►  integer  ──►  [BE binary string]
+[LE binary string]  ──►  FlipByteOrder  ──►  integer  ──►  BEP walk  ──►  path string  ──►  integer  ──►  FlipByteOrder  ──►  [LE binary string]
+```
+
+---
+
+### FlipByteOrder Helper
+
+`FlipByteOrder` is the single conversion point between BE and LE. It reverses the byte-chunk order of a binary string while preserving the bit order within each 8-bit chunk.
+
+```csharp
+public static string FlipByteOrder(string binary)
+{
+    List<string> chunks = new List<string>();
+    for (int i = 0; i < binary.Length; i += 8)
+    {
+        string chunk = binary.Substring(i, Math.Min(8, binary.Length - i));
+        if (chunk.Length < 8) chunk = chunk.PadRight(8, '0');
+        chunks.Add(chunk);
+    }
+    chunks.Reverse();
+    return string.Join("", chunks);
+}
+```
+
+Example:
+
+```
+BE: 11001010 00110001   →   FlipByteOrder   →   LE: 00110001 11001010
+LE: 00110001 11001010   →   FlipByteOrder   →   BE: 11001010 00110001
+```
+
+---
+
+### Unified API
+
+The `Compress` and `Decompress` methods accept a `ByteOrder` enum and dispatch automatically:
+
+```csharp
+public enum ByteOrder { BigEndian, LittleEndian }
+
+string result   = BEP.Compress(binary,    byteWidth, ByteOrder.BigEndian);
+string result   = BEP.Compress(binary,    byteWidth, ByteOrder.LittleEndian);
+string original = BEP.Decompress(path,    byteWidth, ByteOrder.BigEndian);
+string original = BEP.Decompress(path,    byteWidth, ByteOrder.LittleEndian);
+```
+
+Supported `byteWidth` values: `1` (8-bit), `2` (16-bit), `3` (24-bit), `4` (32-bit).
+
+---
+
+### Big Endian Examples
+
+All examples from Section 3 of this paper use Big Endian convention (MSB first).
+
+**1-Byte (8-bit)**
+
+```
+origin  (8 bits) [BE]:  11001010           → decimal 202
+result  (7 bits) [BE]:  0110101
+restored         [BE]:  11001010  ✓
+```
+
+**2-Byte (16-bit)**
+
+```
+origin (16 bits) [BE]:  11001010 00110001  → decimal 51,762
+result (15 bits) [BE]:  011010100001101
+restored         [BE]:  11001010 00110001  ✓
+```
+
+**4-Byte (32-bit)**
+
+```
+origin (32 bits) [BE]:  10011101 01000110 00001100 01011101  → decimal 3,123,733,177
+result (30 bits) [BE]:  11110100 11000010 00001000 011010
+restored         [BE]:  10011101 01000110 00001100 01011101  ✓
+```
+
+---
+
+### Little Endian Examples
+
+The same values expressed in Little Endian (LSB byte first). The integer being compressed is identical — only the binary string representation is reversed at the byte level.
+
+**1-Byte (8-bit)**
+> Single-byte values are byte-order invariant — there is only one byte to order.
+
+```
+origin  (8 bits) [LE]:  11001010           → decimal 202
+result  (7 bits) [LE]:  0110101
+restored         [LE]:  11001010  ✓
+```
+
+**2-Byte (16-bit)**
+
+```
+origin (16 bits) [LE]:  00110001 11001010  → decimal 51,762  (bytes reversed vs BE)
+result (15 bits) [LE]:  011010100001101
+restored         [LE]:  00110001 11001010  ✓
+```
+
+**4-Byte (32-bit)**
+
+```
+origin (32 bits) [LE]:  01011101 00001100 01000110 10011101  → decimal 3,123,733,177
+result (30 bits) [LE]:  11110100 11000010 00001000 011010
+restored         [LE]:  01011101 00001100 01000110 10011101  ✓
+```
+
+> **Note:** The compressed path string is the same for both BE and LE inputs of the same value — because the path is derived from the integer, not the string representation. Only the restored output binary string differs in byte order.
+
+---
+
+### Value Compression — Endian-Agnostic
+
+When working directly with integer values rather than binary strings, byte order is irrelevant. `ValCompressor` and `ValDecompressor` operate purely on the number:
+
+```csharp
+long original    = 3123733177;
+string path      = BEP.ValCompressor(original);    // "11110100110000100000100001101 0"
+long restored    = BEP.ValDecompressor(path);      // 3123733177
+bool lossless    = (original == restored);         // true
+```
+
+Use the value-level methods when your pipeline already works with integers and byte order conversion is handled externally.
+
+---
+
 ## License
 
-Copyright 2026 Rich Wagner — [newdawndata.com](https://www.newdawndata.com)
+Copyright 2026 Rich Wagner — [newdawndata.com](https://newdawndata.com)
 
 Licensed under the Apache License, Version 2.0. You may obtain a copy of the License at:
 
 http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software distributed under this
-license is distributed on an **"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND**,
-either express or implied. See the License for the specific language governing permissions
-and limitations under the License.
+Unless required by applicable law or agreed to in writing, software distributed under this license is distributed on an **"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND**, either express or implied. See the License for the specific language governing permissions and limitations under the License.
