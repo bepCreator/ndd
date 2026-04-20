@@ -2,7 +2,7 @@
 
 **Author:** Rich Wagner  
 **Date:** March 11, 2026  
-**Contact:** wagnerrich92@gmail.com
+**Contact:** rich@newdawndata.com
 
 ---
 
