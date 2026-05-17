@@ -1,0 +1,62 @@
+inBEP
+Copyright 2025 Rich Wagner
+
+This product includes software developed by Rich Wagner
+(https://newdawndata.com).
+
+================================================================================
+ALGORITHM ATTRIBUTION
+================================================================================
+
+The Binary Equation Path (BEP) algorithm, on which this software is built,
+was originally designed and developed by Rich Wagner. The algorithm centers
+on the recurrence f(n) = floor(n/2) applied to binary integer
+representations, with an implicit most-significant-bit convention and a
+configurable byteWidth parameter. BEP and its derived constructs in this
+repository — including but not limited to the inBEP codec family,
+NibbleContext (orders 2 and 3), ArithmeticContext, DeltaContext,
+TextPipelineCtx (BWT+MTF+RePair+RiceBEP), the LZ77/BEP hybrids (Lz77BepV1
+through Lz77BepV3), StrideSplitBep, FloatAwareBep, PreseededNibbleContextBep,
+the BEP path-capture diagnostics, and the BLEP1 / Gzipb / Xzb / Zipb / Tarb
+container wrappers — are the original work of Rich Wagner unless otherwise
+noted in the source files themselves.
+
+When redistributing this software or any Derivative Work, the Apache License
+(Section 4.d) requires that the contents of this NOTICE file be included.
+Attribution to Rich Wagner as the originator of the BEP algorithm should be
+preserved in any publication, presentation, benchmark report, or product
+that incorporates this work.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+This software depends on the following third-party components, redistributed
+in accordance with their respective licenses:
+
+  LZMA SDK (Igor Pavlov)
+      Public domain. Used by Benchmark.RunLzma and the lzma CLI baseline.
+      https://www.7-zip.org/sdk.html
+
+  ZstdSharp.Port
+      BSD-3-Clause license. A managed C# port of Zstandard. Used by
+      Benchmark.RunZstandard and the zstd CLI baseline.
+      https://github.com/oleg-st/ZstdSharp
+
+  Joveler.Compression.XZ
+      BSD-2-Clause license. P/Invoke wrapper around liblzma. Used by the
+      Xz / Xzb wrapper codec family.
+      https://github.com/ied206/Joveler.Compression
+
+  liblzma (XZ Utils, Lasse Collin and contributors)
+      Public domain (core); some components 0BSD or LGPL. Loaded at runtime
+      by Joveler.Compression.XZ.
+      https://tukaani.org/xz/
+
+  System.IO.Compression (Microsoft .NET)
+      MIT license. Provides DeflateStream, BrotliStream, GZipStream, and
+      ZipArchive used by the Deflate / Brotli / Gzip / Zip baselines.
+
+The reference codec results produced by this software are for comparative
+benchmarking only. Each third-party codec remains the work of its respective
+authors and is governed by its own license.
