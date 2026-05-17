@@ -638,9 +638,9 @@ static string ValCompressor(long val)
 ```csharp
 static long ValDecompressor(string bts)
 {
-    long odd = Convert.ToInt32(char.GetNumericValue(bts\[bts.Length - 1]));
+    long odd = Convert.ToInt32(char.GetNumericValue(bts[bts.Length - 1]));
     long val = 1;
-    char lc  = bts\[0];
+    char lc  = bts[0];
     foreach (char c in bts)
     {
         if (c != lc) val += 1;
@@ -683,9 +683,9 @@ The mirror operation: subtract instead of add when reconstructing.
 ```csharp
 static long ValDecompressorCeil(string bts)
 {
-    long odd = Convert.ToInt32(char.GetNumericValue(bts\[bts.Length - 1]));
+    long odd = Convert.ToInt32(char.GetNumericValue(bts[bts.Length - 1]));
     long val = 1;
-    char lc  = bts\[0];
+    char lc  = bts[0];
     foreach (char c in bts)
     {
         if (c != lc) val -= 1;   // ceil walk: subtract instead of add
