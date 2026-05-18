@@ -13,6 +13,18 @@ Traditional computing has utilized the base-256 model for binary management sinc
 
 Binary was meant to be a universal correspondence tool for all information. By assuming binary randomness, an equation for a shorter binary path can be found for all available numbers not equating to 0 or 1, achieved by transforming the Collatz Conjecture into a path-based solution. Two complementary walks emerge from this construction — a **floor walk** that strips the least significant bit at each step and a **ceil walk** that rounds upward — and both converge to 1 with provably optimal step counts of `⌊log₂(n)⌋` and `⌈log₂(n)⌉` respectively.
 
+The orange bars are byte-aligned binary length; the purple line is the BEP path length. The vertical gap between the top of each bar and the line is the per-integer bit saving — biggest right after each byte boundary
+(L = 1, L = 8), smallest right before one (L = 7, L = 15).
+
+```mermaid
+xychart-beta
+    title "BEP path length vs byte-aligned binary length"
+    x-axis "BEP path length L (bits)" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    y-axis "Bits to represent the value" 0 --> 28
+    bar  [8, 8, 8, 8, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16, 16, 24]
+    line [1, 2, 3, 4, 5, 6, 7, 8,  9, 10, 11, 12, 13, 14, 15, 16]
+```
+
 \---
 
 ## Table of Contents
