@@ -4,7 +4,7 @@
 **Date:** March 11, 2026  
 **Revision:** May 8, 2026
 **Contact:** rich@newdawndata.com
-
+**Compressor:** [inBEP](https://github.com/bepCreator/inBEP)
 \---
 
 ## Abstract
